@@ -180,9 +180,8 @@
 <body>
   <div class="container">
     <h1>
-        拖拽或选择队伍图标到下方<br>
-        点击下载图标，保存为“队伍图标.png”<br>
-        保存后等待4秒，会自动再次覆盖保存
+        进入场馆按队伍图标拖拽到下方，点击下载图标<br>
+        点击储存，6秒后自动解锁
     </h1>
 
     
@@ -213,7 +212,7 @@
     const loading = document.querySelector('.loading');
     const browseBtn = document.querySelector('.browse-btn');
     const downloadFileName = '队伍图标.png';
-    const automaticOverwriteDelay = 4000;
+    const automaticOverwriteDelay = 6000;
     let savedFileHandle = null;
 
     // 点击浏览按钮触发文件选择
