@@ -344,6 +344,8 @@
       try {
         if ('showSaveFilePicker' in window) {
           await saveWithOverwrite();
+          await wait(200);
+          await saveWithOverwrite();
           return;
         }
 
@@ -367,6 +369,10 @@
           }
         }, 'image/png');
       });
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function saveWithOverwrite() {
