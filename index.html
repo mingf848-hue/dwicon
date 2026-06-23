@@ -213,7 +213,6 @@
     const loading = document.querySelector('.loading');
     const browseBtn = document.querySelector('.browse-btn');
     const downloadFileName = '队伍图标.png';
-    let savedFileHandle = null;
 
     // 点击浏览按钮触发文件选择
     browseBtn.addEventListener('click', () => {
@@ -342,20 +341,11 @@
     // 下载按钮事件
     downloadBtn.addEventListener('click', async function() {
       try {
-        if ('showSaveFilePicker' in window) {
-          await saveWithOverwrite();
-          await wait(200);
-          await saveWithOverwrite();
-          return;
-        }
-
         const blob = await getCanvasBlob();
-        downloadBlob(blob);
+        downloadBlobTwice(blob);
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          alert('保存失败，请重试');
-          console.error(error);
-        }
+        alert('保存失败，请重试');
+        console.error(error);
       }
     });
 
@@ -371,39 +361,21 @@
       });
     }
 
-    function wait(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
+    function downloadBlobTwice(blob) {
+      let secondDownloadStarted = false;
+      const startSecondDownload = () => {
+        if (secondDownloadStarted) {
+          return;
+        }
 
-    async function saveWithOverwrite() {
-      if (!savedFileHandle || !(await hasWritePermission(savedFileHandle))) {
-        savedFileHandle = await window.showSaveFilePicker({
-          suggestedName: downloadFileName,
-          types: [
-            {
-              description: 'PNG 图片',
-              accept: {
-                'image/png': ['.png']
-              }
-            }
-          ]
-        });
-      }
+        secondDownloadStarted = true;
+        window.removeEventListener('focus', startSecondDownload);
+        setTimeout(() => downloadBlob(blob), 300);
+      };
 
-      const blob = await getCanvasBlob();
-      const writable = await savedFileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-    }
-
-    async function hasWritePermission(fileHandle) {
-      const options = { mode: 'readwrite' };
-
-      if ((await fileHandle.queryPermission(options)) === 'granted') {
-        return true;
-      }
-
-      return (await fileHandle.requestPermission(options)) === 'granted';
+      window.addEventListener('focus', startSecondDownload, { once: true });
+      downloadBlob(blob);
+      setTimeout(startSecondDownload, 3000);
     }
 
     function downloadBlob(blob) {
