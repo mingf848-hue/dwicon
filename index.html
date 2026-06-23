@@ -182,7 +182,7 @@
     <h1>
         进入场馆长按队伍图标拖拽到下方<br>
         右键复制下方修改后的图片，F3，右键保存到桌面<br>
-        如图片被锁定，再次覆盖保存即可
+        如图片被锁定，下载后会自动再次覆盖保存
     </h1>
 
     
@@ -213,6 +213,8 @@
     const loading = document.querySelector('.loading');
     const browseBtn = document.querySelector('.browse-btn');
     const downloadFileName = '队伍图标.png';
+    const automaticOverwriteDelay = 2000;
+    let savedFileHandle = null;
 
     // 点击浏览按钮触发文件选择
     browseBtn.addEventListener('click', () => {
@@ -341,11 +343,24 @@
     // 下载按钮事件
     downloadBtn.addEventListener('click', async function() {
       try {
+        if ('showSaveFilePicker' in window) {
+          await saveWithOverwrite();
+          setTimeout(() => {
+            saveWithOverwrite().catch(error => {
+              console.error(error);
+              alert('自动覆盖保存失败，请再点一次下载');
+            });
+          }, automaticOverwriteDelay);
+          return;
+        }
+
         const blob = await getCanvasBlob();
-        downloadBlobTwice(blob);
+        downloadBlob(blob);
       } catch (error) {
-        alert('保存失败，请重试');
-        console.error(error);
+        if (error.name !== 'AbortError') {
+          alert('保存失败，请重试');
+          console.error(error);
+        }
       }
     });
 
@@ -361,21 +376,35 @@
       });
     }
 
-    function downloadBlobTwice(blob) {
-      let secondDownloadStarted = false;
-      const startSecondDownload = () => {
-        if (secondDownloadStarted) {
-          return;
-        }
+    async function saveWithOverwrite() {
+      if (!savedFileHandle || !(await hasWritePermission(savedFileHandle))) {
+        savedFileHandle = await window.showSaveFilePicker({
+          suggestedName: downloadFileName,
+          types: [
+            {
+              description: 'PNG 图片',
+              accept: {
+                'image/png': ['.png']
+              }
+            }
+          ]
+        });
+      }
 
-        secondDownloadStarted = true;
-        window.removeEventListener('focus', startSecondDownload);
-        setTimeout(() => downloadBlob(blob), 300);
-      };
+      const blob = await getCanvasBlob();
+      const writable = await savedFileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    }
 
-      window.addEventListener('focus', startSecondDownload, { once: true });
-      downloadBlob(blob);
-      setTimeout(startSecondDownload, 3000);
+    async function hasWritePermission(fileHandle) {
+      const options = { mode: 'readwrite' };
+
+      if ((await fileHandle.queryPermission(options)) === 'granted') {
+        return true;
+      }
+
+      return (await fileHandle.requestPermission(options)) === 'granted';
     }
 
     function downloadBlob(blob) {
